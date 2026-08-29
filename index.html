@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>سينما الأصدقاء</title>
+    <title>سينما الأصدقاء VIP</title>
     <script src="https://unpkg.com/peerjs@1.5.1/dist/peerjs.min.js"></script>
     <style>
         :root {
@@ -15,301 +15,263 @@
             --border: #333;
         }
         body {
-            margin: 0;
-            padding: 10px;
-            background-color: var(--bg-color);
-            color: var(--text);
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+            margin: 0; padding: 10px; background: var(--bg-color); color: var(--text);
+            font-family: 'Segoe UI', system-ui, sans-serif; display: flex; flex-direction: column; align-items: center;
         }
-        .container {
-            width: 100%;
-            max-width: 960px;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-        .panel {
-            background-color: var(--panel-bg);
-            padding: 20px;
-            border-radius: 12px;
-            border: 1px solid var(--border);
-            text-align: center;
-        }
-        h2, h3 { margin-top: 0; }
-        .controls {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            justify-content: center;
-        }
-        button {
-            padding: 12px 24px;
-            border: none;
-            border-radius: 8px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: 0.2s;
-            font-size: 1em;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
+        .container { width: 100%; max-width: 960px; display: flex; flex-direction: column; gap: 15px; }
+        .panel { background: var(--panel-bg); padding: 20px; border-radius: 12px; border: 1px solid var(--border); text-align: center; }
+        .controls { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 15px; }
+        button { padding: 12px 24px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 1em; }
         button:hover { opacity: 0.9; transform: translateY(-1px); }
-        .btn-main { background-color: var(--primary); color: white; }
-        .btn-secondary { background-color: var(--border); color: white; }
-        .btn-active { background-color: #fca311; color: black; }
+        .btn-main { background: var(--primary); color: white; }
+        .btn-success { background: var(--success); color: white; }
+        .btn-secondary { background: #444; color: white; }
+        .btn-active { background: #fca311; color: black; }
+        
         #roomUrlInput {
-            width: 100%;
-            padding: 12px;
-            background: #000;
-            color: var(--success);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            margin-top: 15px;
-            font-family: monospace;
-            text-align: center;
-            display: none;
+            width: 100%; padding: 12px; background: #000; color: var(--success);
+            border: 1px solid var(--border); border-radius: 8px; margin-top: 15px;
+            font-family: monospace; text-align: center; font-size: 1.1em;
         }
-        .status { font-size: 0.9em; color: #888; margin-top: 10px; }
+        
         .video-container {
-            position: relative;
-            width: 100%;
-            background: #000;
-            border-radius: 12px;
-            aspect-ratio: 16/9;
-            overflow: hidden;
-            border: 1px solid var(--border);
+            position: relative; width: 100%; background: #000; border-radius: 12px;
+            aspect-ratio: 16/9; overflow: hidden; border: 1px solid var(--border);
         }
-        video {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
+        /* لاحظ أنه تم إزالة خصائص التحكم من الفيديو في HTML أدناه */
+        video { width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
+        
+        .overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.85); display: flex; flex-direction: column;
+            justify-content: center; align-items: center; z-index: 10; text-align: center; padding: 20px;
         }
-        #playOverlay {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.9);
-            display: none;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 10;
-        }
-        #playOverlay button {
-            font-size: 1.4em;
-            padding: 20px 40px;
-            background-color: var(--success);
-        }
-        @media (max-width: 600px) {
-            button { width: 100%; justify-content: center; }
-            h2 { font-size: 1.5em; }
-        }
+        #audioContainer { display: none; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div class="panel">
-        <h2>🎬 سينما الأصدقاء</h2>
-        <div class="status" id="statusTxt">جاري الاتصال بالسيرفر...</div>
-
-        <!-- لوحة التحكم -->
-        <div class="controls" id="controlsPanel" style="display:none;">
-            <!-- أدوات المضيف -->
-            <button class="btn-main" id="startBtn" onclick="createRoomAndStart()">
-                <span>Create</span> إنشاء غرفة وبدء البث
-            </button>
-            <button class="btn-secondary" id="hostMicBtn" onclick="toggleHostMic()" style="display:none;">
-                🎤 إيقاف مايك المضيف
-            </button>
-            
-            <!-- أدوات المشاهد -->
-            <button class="btn-active" id="viewerMicBtn" onclick="toggleViewerMic()" style="display:none;">
-                🎤 تشغيل مايكروفوني للتحدث
-            </button>
-        </div>
-
-        <!-- رابط الغرفة (للمضيف) -->
+    <!-- لوحة المضيف (تظهر فقط لصاحب الرابط الأساسي) -->
+    <div class="panel" id="hostPanel" style="display:none;">
+        <h2>🎬 غرفة التحكم (المضيف)</h2>
+        <div id="hostStatus" style="color:#888;">جاري تجهيز الغرفة...</div>
         <input type="text" id="roomUrlInput" readonly onclick="this.select(); document.execCommand('copy'); alert('تم نسخ الرابط! أرسله لصديقك.');">
+        
+        <div class="controls">
+            <button class="btn-main" id="startStreamBtn" onclick="startHostStream()">▶️ بدء بث الفيلم للغرفة</button>
+            <button class="btn-secondary" id="hostMicBtn" onclick="toggleMic('host')" style="display:none;">🎤 إيقاف المايكروفون</button>
+        </div>
     </div>
 
-    <!-- شاشة العرض -->
-    <div class="video-container">
-        <!-- زر التشغيل الإجباري (حل الشاشة السوداء في الموبايل) -->
-        <div id="playOverlay">
-            <h3 style="color: white; margin-bottom: 20px;">البث جاهز للمشاهدة</h3>
-            <button onclick="playVideo()">▶️ تشغيل السينما</button>
+    <!-- لوحة المشاهد (تظهر فقط للصديق) -->
+    <div class="panel" id="viewerPanel" style="display:none;">
+        <h2>🍿 سينما الأصدقاء</h2>
+        <div class="controls">
+            <button class="btn-active" id="viewerMicBtn" onclick="toggleMic('viewer')" style="display:none;">🎤 تشغيل مايكروفوني</button>
         </div>
-        <video id="mainVideo" playsinline controls></video>
+    </div>
+
+    <!-- شاشة العرض (بدون أي أزرار تحكم للمشاهد) -->
+    <div class="video-container">
+        
+        <!-- شاشة انتظار المشاهد (لحل مشكلة الهواتف والمزامنة) -->
+        <div class="overlay" id="viewerJoinOverlay" style="display:none;">
+            <h3 style="color: white; margin-bottom: 20px;">أهلاً بك في غرفة المشاهدة</h3>
+            <button class="btn-success" onclick="viewerEnterRoom()" style="font-size: 1.2em; padding: 15px 30px;">الدخول للغرفة</button>
+        </div>
+        
+        <div class="overlay" id="waitingHostOverlay" style="display:none;">
+            <h3 style="color: #fca311;">في انتظار المضيف لبدء الفيلم...</h3>
+            <p style="color: #aaa;">سيبدأ البث هنا تلقائياً</p>
+        </div>
+        
+        <div class="overlay" id="forcePlayOverlay" style="display:none;">
+            <h3 style="color: white;">البث يعمل الآن!</h3>
+            <button class="btn-success" onclick="forcePlayVideo()">▶️ انقر للمشاهدة</button>
+        </div>
+
+        <!-- تم إزالة 'controls' لمنع المشاهد من التقديم/التأخير/الإيقاف -->
+        <video id="mainVideo" playsinline autoplay></video>
     </div>
 </div>
 
+<!-- حاوية مخفية لتشغيل أصوات المشاهدين عند المضيف -->
+<div id="audioContainer"></div>
+
 <script>
     const peer = new Peer();
+    const isHost = !window.location.hash; // إذا لم يكن هناك Hash في الرابط، فأنت المضيف
+    
+    let localStream = null;
+    let localMicTrack = null;
+    let connectedViewers = []; // طابور المشاهدين المتصلين
+    
+    // تعريف عناصر الواجهة
     const mainVideo = document.getElementById('mainVideo');
-    const statusTxt = document.getElementById('statusTxt');
-    const controlsPanel = document.getElementById('controlsPanel');
-    const startBtn = document.getElementById('startBtn');
-    const hostMicBtn = document.getElementById('hostMicBtn');
-    const viewerMicBtn = document.getElementById('viewerMicBtn');
-    const roomUrlInput = document.getElementById('roomUrlInput');
-    const playOverlay = document.getElementById('playOverlay');
+    const hostPanel = document.getElementById('hostPanel');
+    const viewerPanel = document.getElementById('viewerPanel');
+    const audioContainer = document.getElementById('audioContainer');
 
-    let localStream;
-    let localMicTrack;
-    let peerConnection;
-    let isHost = false;
-
-    // عند الاتصال بالسيرفر بنجاح
     peer.on('open', (id) => {
-        statusTxt.innerText = "متصل وجاهز للبدء.";
-        statusTxt.style.color = "#28a745";
-        controlsPanel.style.display = 'flex';
-
-        // تحقق مما إذا كنت دخلت عبر رابط غرفة
-        const hostId = window.location.hash.substring(1);
-        if (hostId) {
-            joinRoom(hostId);
+        if (isHost) {
+            hostPanel.style.display = 'block';
+            document.getElementById('roomUrlInput').value = window.location.href + "#" + id;
+            document.getElementById('hostStatus').innerText = "الغرفة جاهزة. أرسل الرابط لصديقك ثم ابدأ البث.";
+        } else {
+            viewerPanel.style.display = 'block';
+            document.getElementById('viewerJoinOverlay').style.display = 'flex'; // إجبار المشاهد على النقر لدخول الغرفة
         }
     });
 
     // ==========================================
-    // 1. أكواد المضيف (Host)
+    // 1. منطق المضيف (Host Logic)
     // ==========================================
-    async function createRoomAndStart() {
-        try {
-            statusTxt.innerText = "جاري التقاط شاشة الفيلم والمايكروفون...";
-            
-            // 1. التقاط المايكروفون (لضمان عمل محرك الصوت قبل أي شيء)
-            const micStream = await navigator.mediaDevices.getUserMedia({
-                audio: { echoCancellation: true, noiseSuppression: true },
-                video: false
-            });
-            localMicTrack = micStream.getAudioTracks()[0];
-
-            // 2. التقاط شاشة نتفليكس بالصوت الخام (MUST CHOOSE CHROME TAB)
-            const displayStream = await navigator.mediaDevices.getDisplayMedia({
-                video: { width: 1280, height: 720 },
-                audio: { echoCancellation: false, noiseSuppression: false }
-            });
-
-            // دمج الصوت يدوياً باستخدام AudioContext (الطريقة المستقرة)
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            const dest = audioContext.createMediaStreamDestination();
-            
-            if(displayStream.getAudioTracks().length > 0){
-                audioContext.createMediaStreamSource(displayStream).connect(dest);
+    if (isHost) {
+        // عندما يدخل المشاهد للغرفة (سواء قبل البث أو بعده)
+        peer.on('connection', (conn) => {
+            if (!connectedViewers.includes(conn.peer)) {
+                connectedViewers.push(conn.peer);
+                // إذا كان البث شغالاً أصلاً، أرسله له فوراً (دخول متأخر)
+                if (localStream) {
+                    peer.call(conn.peer, localStream);
+                }
             }
-            audioContext.createMediaStreamSource(micStream).connect(dest);
+        });
 
-            // البث النهائي (فيديو الشاشة + الصوت المدمج)
-            localStream = new MediaStream([
-                displayStream.getVideoTracks()[0],
-                dest.stream.getAudioTracks()[0]
-            ]);
-
-            // عرض البث محلياً
-            mainVideo.srcObject = localStream;
-            mainVideo.muted = true; // نكتمه عندك عشان ما تسمع صدى نفسك
-            mainVideo.play();
-
-            isHost = true;
-            statusTxt.innerText = "البث جاهز! انسخ الرابط في الأسفل وأرسله لصديقك.";
-            statusTxt.style.color = "#4CAF50";
-            
-            startBtn.style.display = 'none';
-            hostMicBtn.style.display = 'flex';
-            
-            // إنشاء رابط الغرفة باستخدام الـ Hash
-            const roomUrl = window.location.href + "#" + peer.id;
-            roomUrlInput.value = roomUrl;
-            roomUrlInput.style.display = 'block';
-
-            // الاستماع لاتصال صديقك
-            peer.on('call', (call) => {
-                call.answer(localStream); // الرد وإرسال البث له
+        // عندما يقوم المشاهد بتشغيل المايكروفون الخاص به
+        peer.on('call', (call) => {
+            call.answer(); // استلام الصوت فقط
+            call.on('stream', (remoteAudio) => {
+                const audioEl = document.createElement('audio');
+                audioEl.srcObject = remoteAudio;
+                audioEl.autoplay = true;
+                audioContainer.appendChild(audioEl);
             });
+        });
 
-        } catch (error) {
-            console.error(error);
-            alert("فشل بدء البث. تأكد من منح الصلاحيات واختيار علامة تبويب للمشاركة.");
-            statusTxt.innerText = "حدث خطأ في بدء البث.";
-            statusTxt.style.color = "#e50914";
-        }
-    }
+        async function startHostStream() {
+            try {
+                document.getElementById('hostStatus').innerText = "جاري التقاط الشاشة...";
+                
+                // التقاط مايك المضيف
+                const micStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true }});
+                localMicTrack = micStream.getAudioTracks()[0];
 
-    function toggleHostMic() {
-        if (localMicTrack) {
-            localMicTrack.enabled = !localMicTrack.enabled;
-            hostMicBtn.innerText = localMicTrack.enabled ? "🎤 إيقاف مايك المضيف" : "🔇 تشغيل مايك المضيف";
-            hostMicBtn.className = localMicTrack.enabled ? "btn-secondary" : "btn-secondary btn-active";
+                // التقاط شاشة نتفليكس (تذكر: Chrome Tab حصراً + Share Audio)
+                const displayStream = await navigator.mediaDevices.getDisplayMedia({
+                    video: { width: 1280, height: 720 },
+                    audio: { echoCancellation: false, noiseSuppression: false }
+                });
+
+                if (displayStream.getAudioTracks().length === 0) {
+                    alert("⚠️ تنبيه: لم تقم بتفعيل 'Share tab audio'. لن يتم بث صوت الفيلم!");
+                }
+
+                // دمج الصوت (مايك + فيلم)
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 48000 });
+                const dest = audioContext.createMediaStreamDestination();
+                
+                if (displayStream.getAudioTracks().length > 0) {
+                    audioContext.createMediaStreamSource(displayStream).connect(dest);
+                }
+                audioContext.createMediaStreamSource(micStream).connect(dest);
+
+                localStream = new MediaStream([
+                    displayStream.getVideoTracks()[0],
+                    dest.stream.getAudioTracks()[0]
+                ]);
+
+                // عرض البث للمضيف نفسه
+                mainVideo.srcObject = localStream;
+                mainVideo.muted = true; // كتم الصوت محلياً لمنع الصدى
+                mainVideo.play();
+
+                document.getElementById('hostStatus').innerText = "البث المباشر يعمل الآن 🔴";
+                document.getElementById('hostStatus').style.color = "#e50914";
+                document.getElementById('startStreamBtn').style.display = 'none';
+                document.getElementById('hostMicBtn').style.display = 'block';
+
+                // إرسال البث فوراً لكل مَن هو في الغرفة حالياً (دخول مبكر)
+                connectedViewers.forEach(viewerId => {
+                    peer.call(viewerId, localStream);
+                });
+
+            } catch (error) {
+                console.error(error);
+                alert("فشل بدء البث.");
+            }
         }
     }
 
     // ==========================================
-    // 2. أكواد المشاهد (Viewer)
+    // 2. منطق المشاهد (Viewer Logic)
     // ==========================================
-    async function joinRoom(hostId) {
-        isHost = false;
-        statusTxt.innerText = "جاري الاتصال بغرفة المضيف...";
-        statusTxt.style.color = "#fca311";
-        startBtn.style.display = 'none';
+    if (!isHost) {
+        const hostId = window.location.hash.substring(1);
 
-        // المشاهد يتصل أولاً بـ "صمت" لضمان جودة صوت الفيلم
-        const call = peer.call(hostId, new MediaStream());
-        
-        call.on('stream', (remoteStream) => {
-            statusTxt.innerText = "متصل ويتم الآن استقبال البث.";
-            statusTxt.style.color = "#4CAF50";
-            mainVideo.srcObject = remoteStream;
+        // تحدث عندما يضغط المشاهد على "الدخول للغرفة"
+        function viewerEnterRoom() {
+            // كسر حماية المتصفح بخطوة تفاعلية وهمية لتفعيل Autoplay
+            mainVideo.play().catch(() => {});
             
-            // إظهار زر التشغيل الإجباري لحل مشكلة المتصفحات
-            playOverlay.style.display = 'flex';
-            viewerMicBtn.style.display = 'flex';
+            document.getElementById('viewerJoinOverlay').style.display = 'none';
+            document.getElementById('waitingHostOverlay').style.display = 'flex';
+            document.getElementById('viewerMicBtn').style.display = 'block';
+
+            // الاتصال الصامت بجهاز المضيف لتسجيل الحضور في طابور الغرفة
+            peer.connect(hostId);
+        }
+
+        // عندما يصل البث من المضيف (سواء لحظة الدخول أو لاحقاً)
+        peer.on('call', (call) => {
+            call.answer(); // استلام البث
+            call.on('stream', (stream) => {
+                document.getElementById('waitingHostOverlay').style.display = 'none';
+                mainVideo.srcObject = stream;
+                
+                // محاولة التشغيل التلقائي (الذي تم تفعليه مسبقاً عبر زر الدخول)
+                mainVideo.play().catch(err => {
+                    // إذا رفض متصفح الهاتف التشغيل لأي سبب، نعرض زر التشغيل الإجباري
+                    document.getElementById('forcePlayOverlay').style.display = 'flex';
+                });
+            });
         });
 
-        call.on('error', (err) => {
-            alert("حدث خطأ في الاتصال بالبث.");
-            console.error(err);
-        });
+        function forcePlayVideo() {
+            mainVideo.play();
+            document.getElementById('forcePlayOverlay').style.display = 'none';
+        }
     }
 
-    // المشاهد يقرر تشغيل مايكروفونه
-    async function toggleViewerMic() {
+    // ==========================================
+    // 3. أداة التحكم بالمايكروفون المشتركة
+    // ==========================================
+    async function toggleMic(role) {
+        const btn = role === 'host' ? document.getElementById('hostMicBtn') : document.getElementById('viewerMicBtn');
+        
         try {
             if (!localMicTrack) {
-                // التقاط المايك لأول مرة
-                const micStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                // التقاط المايكروفون لأول مرة للمشاهد
+                const micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 localMicTrack = micStream.getAudioTracks()[0];
                 
-                // في نظام Peer-to-Peer لا يمكن إضافة مسار بعد بدء المكالمة بسهولة
-                // أفضل طريقة هي "إعادة الاتصال" ولكن بإرسال المايك
-                const hostId = window.location.hash.substring(1);
-                peer.call(hostId, micStream); 
+                if (role === 'viewer') {
+                    // إرسال المايكروفون لجهاز المضيف
+                    const hostId = window.location.hash.substring(1);
+                    peer.call(hostId, micStream);
+                }
                 
-                viewerMicBtn.innerText = "🎤 إيقاف مايكروفوني";
-                viewerMicBtn.className = "btn-main";
-                alert("تم تشغيل المايكروفون. يرجى استخدام سماعات الأذن لتجنب الصدى.");
+                btn.innerText = "🎤 إيقاف مايكروفوني";
+                btn.className = "btn-secondary";
             } else {
                 localMicTrack.enabled = !localMicTrack.enabled;
-                viewerMicBtn.innerText = localMicTrack.enabled ? "🎤 إيقاف مايكروفوني" : "🔇 تشغيل مايكروفوني";
-                viewerMicBtn.className = localMicTrack.enabled ? "btn-main" : "btn-active";
+                btn.innerText = localMicTrack.enabled ? "🎤 إيقاف مايكروفوني" : "🔇 تشغيل مايكروفوني";
+                btn.className = localMicTrack.enabled ? "btn-secondary" : "btn-active";
             }
         } catch (err) {
-            alert("لا يمكن الوصول للمايكروفون.");
+            alert("لا يمكن الوصول للمايكروفون. يرجى إعطاء الصلاحية.");
         }
-    }
-
-    // دالة النقر الإجبارية لتشغيل الفيديو (تحل مشكلة الشاشة السوداء)
-    function playVideo() {
-        mainVideo.play().then(() => {
-            playOverlay.style.display = 'none';
-        }).catch(err => {
-            alert("حدث خطأ في تشغيل الفيديو، تأكد من أن المضيف يشارك شاشة.");
-        });
     }
 </script>
 </body>
