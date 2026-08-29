@@ -3,17 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>سينما الأصدقاء VIP</title>
+    <title>سينما الأصدقاء - بث نقي</title>
     <script src="https://unpkg.com/peerjs@1.5.1/dist/peerjs.min.js"></script>
     <style>
-        :root {
-            --bg-color: #080808; --panel-bg: #141414; --text: #ffffff;
-            --primary: #e50914; --success: #28a745; --border: #333;
-        }
-        body {
-            margin: 0; padding: 10px; background: var(--bg-color); color: var(--text);
-            font-family: 'Segoe UI', system-ui, sans-serif; display: flex; flex-direction: column; align-items: center;
-        }
+        :root { --bg-color: #080808; --panel-bg: #141414; --text: #ffffff; --primary: #e50914; --success: #28a745; --border: #333; }
+        body { margin: 0; padding: 10px; background: var(--bg-color); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; display: flex; flex-direction: column; align-items: center; }
         .container { width: 100%; max-width: 960px; display: flex; flex-direction: column; gap: 15px; }
         .panel { background: var(--panel-bg); padding: 20px; border-radius: 12px; border: 1px solid var(--border); text-align: center; }
         .controls { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 15px; }
@@ -21,30 +15,21 @@
         button:hover { opacity: 0.9; transform: translateY(-1px); }
         .btn-main { background: var(--primary); color: white; }
         .btn-success { background: var(--success); color: white; }
-        .btn-secondary { background: #444; color: white; }
-        .btn-active { background: #fca311; color: black; }
-        .btn-fullscreen { background: #2196F3; color: white; margin-top: 10px; }
+        .btn-fullscreen { background: #2196F3; color: white; }
         
         #roomUrlInput {
-            width: 100%; padding: 12px; background: #000; color: var(--success);
-            border: 1px solid var(--border); border-radius: 8px; margin-top: 15px;
-            font-family: monospace; text-align: center; font-size: 1.1em; direction: ltr;
+            width: 100%; padding: 12px; background: #000; color: var(--success); border: 1px solid var(--border);
+            border-radius: 8px; margin-top: 15px; font-family: monospace; text-align: center; font-size: 1.1em; direction: ltr;
         }
         
-        .video-wrapper {
-            position: relative; width: 100%; background: #000; border-radius: 12px;
-            overflow: hidden; border: 1px solid var(--border); display: flex; flex-direction: column;
-        }
+        .video-wrapper { position: relative; width: 100%; background: #000; border-radius: 12px; overflow: hidden; border: 1px solid var(--border); display: flex; flex-direction: column; }
         .video-container { position: relative; width: 100%; aspect-ratio: 16/9; }
-        
         video { width: 100%; height: 100%; object-fit: contain; }
         
         .overlay {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.85); display: flex; flex-direction: column;
-            justify-content: center; align-items: center; z-index: 10; text-align: center; padding: 20px;
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85);
+            display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 10; text-align: center; padding: 20px;
         }
-        #audioContainer { display: none; }
     </style>
 </head>
 <body>
@@ -58,7 +43,6 @@
         
         <div class="controls">
             <button class="btn-main" id="startStreamBtn" onclick="startHostStream()">▶️ بدء بث الفيلم للغرفة</button>
-            <button class="btn-secondary" id="hostMicBtn" onclick="toggleMic('host')" style="display:none;">🎤 إيقاف المايكروفون</button>
         </div>
     </div>
 
@@ -66,8 +50,7 @@
     <div class="panel" id="viewerPanel" style="display:none;">
         <h2>🍿 سينما الأصدقاء</h2>
         <div class="controls">
-            <button class="btn-active" id="viewerMicBtn" onclick="toggleMic('viewer')" style="display:none;">🎤 تشغيل مايكروفوني</button>
-            <button class="btn-fullscreen" id="fullscreenBtn" onclick="toggleFullScreen()" style="display:none;">⛶ تكبير الشاشة</button>
+            <button class="btn-fullscreen" id="fullscreenBtn" onclick="toggleFullScreen()" style="display:none;">⛶ ملء الشاشة</button>
         </div>
     </div>
 
@@ -81,7 +64,6 @@
             
             <div class="overlay" id="waitingHostOverlay" style="display:none;">
                 <h3 style="color: #fca311;">في انتظار المضيف لبدء الفيلم...</h3>
-                <p style="color: #aaa;">سيبدأ البث هنا تلقائياً</p>
             </div>
             
             <div class="overlay" id="forcePlayOverlay" style="display:none;">
@@ -89,29 +71,21 @@
                 <button class="btn-success" onclick="forcePlayVideo()">▶️ انقر للمشاهدة</button>
             </div>
 
+            <!-- مشغل فيديو بكامل ميزاته للمشاهد -->
             <video id="mainVideo" playsinline autoplay controls></video>
         </div>
     </div>
 </div>
 
-<div id="audioContainer"></div>
-
 <script>
     const peer = new Peer();
     const isHost = !window.location.hash; 
-    
     let localStream = null;
-    let localMicTrack = null;
     let connectedViewers = [];
-    
-    // متغيرات الخدعة السحرية للصوت في الهاتف
-    let viewerAudioCtx = null;
-    let viewerMicCall = null; 
     
     const mainVideo = document.getElementById('mainVideo');
     const hostPanel = document.getElementById('hostPanel');
     const viewerPanel = document.getElementById('viewerPanel');
-    const audioContainer = document.getElementById('audioContainer');
 
     peer.on('open', (id) => {
         if (isHost) {
@@ -126,85 +100,45 @@
     });
 
     // ==========================================
-    // 1. أكواد المضيف (Host)
+    // 1. المضيف (بث الشاشة والصوت الخالص)
     // ==========================================
     if (isHost) {
         peer.on('connection', (conn) => {
             if (!connectedViewers.includes(conn.peer)) {
                 connectedViewers.push(conn.peer);
-                if (localStream) {
-                    peer.call(conn.peer, localStream);
-                }
+                if (localStream) peer.call(conn.peer, localStream);
             }
-        });
-
-        // استلام المايكروفون من الضيف وتدميره فوراً عند إغلاقه
-        peer.on('call', (call) => {
-            call.answer();
-            call.on('stream', (remoteAudio) => {
-                const audioEl = document.createElement('audio');
-                audioEl.srcObject = remoteAudio;
-                audioEl.autoplay = true;
-                
-                // تنظيف العنصر فوراً عندما يغلق الضيف مايكروفونه
-                call.on('close', () => {
-                    audioEl.remove();
-                });
-                
-                audioContainer.appendChild(audioEl);
-            });
         });
     }
 
     async function startHostStream() {
         if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
-            alert("⚠️ هام: يجب أن تفتح الموقع برابط يبدأ بـ HTTPS لكي يعمل البث.");
-            return;
+            alert("⚠️ هام: يجب أن تفتح الموقع برابط يبدأ بـ HTTPS."); return;
         }
+
         try {
             document.getElementById('hostStatus').innerText = "جاري التقاط الشاشة...";
-            const displayStream = await navigator.mediaDevices.getDisplayMedia({
-                video: true,
-                audio: { echoCancellation: false, noiseSuppression: false } 
-            });
-
-            document.getElementById('hostStatus').innerText = "جاري التقاط المايكروفون...";
-            const micStream = await navigator.mediaDevices.getUserMedia({ 
-                audio: { echoCancellation: true, noiseSuppression: true },
-                video: false
-            });
-            localMicTrack = micStream.getAudioTracks()[0];
-
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 48000 });
-            const dest = audioContext.createMediaStreamDestination();
             
-            if (displayStream.getAudioTracks().length > 0) {
-                audioContext.createMediaStreamSource(displayStream).connect(dest);
-            }
-            audioContext.createMediaStreamSource(micStream).connect(dest);
+            // سحب مباشر لنتفليكس بدون أي تعديلات أو فلاتر
+            localStream = await navigator.mediaDevices.getDisplayMedia({
+                video: true,
+                audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } 
+            });
 
-            const mixedAudioTrack = dest.stream.getAudioTracks()[0];
-            if ('contentHint' in mixedAudioTrack) {
-                mixedAudioTrack.contentHint = 'music'; // إجبار خوارزميات الضغط على جودة الموسيقى
+            if (localStream.getAudioTracks().length === 0) {
+                alert("⚠️ تنبيه: لم تقم بتفعيل 'مشاركة الصوت' (Share tab audio)!");
             }
-
-            localStream = new MediaStream([
-                displayStream.getVideoTracks()[0],
-                mixedAudioTrack 
-            ]);
 
             mainVideo.srcObject = localStream;
-            mainVideo.muted = true;
+            mainVideo.muted = true; // كتم الصوت عندك فقط
             mainVideo.play();
 
             document.getElementById('hostStatus').innerText = "البث المباشر يعمل الآن 🔴";
             document.getElementById('hostStatus').style.color = "#e50914";
             document.getElementById('startStreamBtn').style.display = 'none';
-            document.getElementById('hostMicBtn').style.display = 'block';
 
-            connectedViewers.forEach(viewerId => {
-                peer.call(viewerId, localStream);
-            });
+            connectedViewers.forEach(viewerId => peer.call(viewerId, localStream));
+
         } catch (error) {
             console.error(error);
             alert("فشل بدء البث. السبب: " + error.message);
@@ -212,17 +146,12 @@
     }
 
     // ==========================================
-    // 2. أكواد المشاهد (الخدعة السحرية للصوت)
+    // 2. المشاهد (استقبال البث كفيلم طبيعي)
     // ==========================================
     function viewerEnterRoom() {
-        // تهيئة محرك الموسيقى السينمائي الخاص بالمتصفح
-        viewerAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        viewerAudioCtx.resume();
-        
         mainVideo.play().catch(() => {}); 
         document.getElementById('viewerJoinOverlay').style.display = 'none';
         document.getElementById('waitingHostOverlay').style.display = 'flex';
-        document.getElementById('viewerMicBtn').style.display = 'block';
         document.getElementById('fullscreenBtn').style.display = 'block'; 
 
         const hostId = window.location.hash.substring(1);
@@ -231,24 +160,11 @@
 
     if (!isHost) {
         peer.on('call', (call) => {
-            call.answer();
+            call.answer(); // استلام البث بدون إرسال مايكروفون
             call.on('stream', (stream) => {
                 document.getElementById('waitingHostOverlay').style.display = 'none';
-                
-                // الخدعة: نكتم عنصر الفيديو تماماً حتى لا يصنفه الأندرويد كمكالمة
                 mainVideo.srcObject = stream;
                 
-                if (viewerAudioCtx) {
-                    mainVideo.muted = true; 
-                    try {
-                        // نسحب الصوت ونضخه في محرك الموسيقى (Media Volume)
-                        const audioSource = viewerAudioCtx.createMediaStreamSource(stream);
-                        audioSource.connect(viewerAudioCtx.destination);
-                    } catch (e) {
-                        mainVideo.muted = false; // كاحتياطي إذا فشل المحرك
-                    }
-                }
-
                 mainVideo.play().catch(err => {
                     document.getElementById('forcePlayOverlay').style.display = 'flex';
                 });
@@ -257,13 +173,13 @@
     }
 
     function forcePlayVideo() {
-        if (viewerAudioCtx && viewerAudioCtx.state === 'suspended') {
-            viewerAudioCtx.resume();
-        }
         mainVideo.play();
         document.getElementById('forcePlayOverlay').style.display = 'none';
     }
 
+    // ==========================================
+    // 3. تكبير الشاشة
+    // ==========================================
     function toggleFullScreen() {
         const videoWrapper = document.getElementById('videoWrapper');
         if (!document.fullscreenElement) {
@@ -272,43 +188,6 @@
         } else {
             if (document.exitFullscreen) document.exitFullscreen();
             else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
-        }
-    }
-
-    // ==========================================
-    // 3. أداة التحكم بالمايكروفون (التحرير الكامل)
-    // ==========================================
-    async function toggleMic(role) {
-        const btn = role === 'host' ? document.getElementById('hostMicBtn') : document.getElementById('viewerMicBtn');
-        
-        try {
-            if (!localMicTrack) {
-                // فتح المايك
-                const micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                localMicTrack = micStream.getAudioTracks()[0];
-                
-                if (role === 'viewer') {
-                    const hostId = window.location.hash.substring(1);
-                    viewerMicCall = peer.call(hostId, micStream); // إنشاء مكالمة مايك منفصلة
-                }
-                
-                btn.innerText = "🎤 إيقاف مايكروفوني";
-                btn.className = "btn-secondary";
-            } else {
-                // الإغلاق الجذري: لا نوقفه فقط، بل نقتله
-                localMicTrack.stop(); 
-                localMicTrack = null; 
-                
-                if (role === 'viewer' && viewerMicCall) {
-                    viewerMicCall.close(); // ذبح الاتصال ليفهم الأندرويد أن المكالمة انتهت
-                    viewerMicCall = null;
-                }
-                
-                btn.innerText = "🔇 تشغيل مايكروفوني";
-                btn.className = "btn-active";
-            }
-        } catch (err) {
-            alert("لا يمكن الوصول للمايكروفون. يرجى السماح به.");
         }
     }
 </script>
