@@ -27,6 +27,7 @@
         .btn-success { background: var(--success); color: white; }
         .btn-secondary { background: #444; color: white; }
         .btn-active { background: #fca311; color: black; }
+        .btn-fullscreen { background: #2196F3; color: white; margin-top: 10px; }
         
         #roomUrlInput {
             width: 100%; padding: 12px; background: #000; color: var(--success);
@@ -34,12 +35,17 @@
             font-family: monospace; text-align: center; font-size: 1.1em; direction: ltr;
         }
         
-        .video-container {
+        .video-wrapper {
             position: relative; width: 100%; background: #000; border-radius: 12px;
-            aspect-ratio: 16/9; overflow: hidden; border: 1px solid var(--border);
+            overflow: hidden; border: 1px solid var(--border); display: flex; flex-direction: column;
         }
         
-        video { width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
+        .video-container {
+            position: relative; width: 100%; aspect-ratio: 16/9;
+        }
+        
+        /* أزلنا الحظر عن الفيديو ليتمكن من التحكم به */
+        video { width: 100%; height: 100%; object-fit: contain; }
         
         .overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -69,29 +75,32 @@
         <h2>🍿 سينما الأصدقاء</h2>
         <div class="controls">
             <button class="btn-active" id="viewerMicBtn" onclick="toggleMic('viewer')" style="display:none;">🎤 تشغيل مايكروفوني</button>
+            <button class="btn-fullscreen" id="fullscreenBtn" onclick="toggleFullScreen()" style="display:none;">⛶ تكبير الشاشة</button>
         </div>
     </div>
 
     <!-- شاشة العرض -->
-    <div class="video-container">
-        
-        <!-- شاشات التفاعل للمشاهد -->
-        <div class="overlay" id="viewerJoinOverlay" style="display:none;">
-            <h3 style="color: white; margin-bottom: 20px;">أهلاً بك في غرفة المشاهدة</h3>
-            <button class="btn-success" onclick="viewerEnterRoom()" style="font-size: 1.2em; padding: 15px 30px;">الدخول للغرفة</button>
-        </div>
-        
-        <div class="overlay" id="waitingHostOverlay" style="display:none;">
-            <h3 style="color: #fca311;">في انتظار المضيف لبدء الفيلم...</h3>
-            <p style="color: #aaa;">سيبدأ البث هنا تلقائياً</p>
-        </div>
-        
-        <div class="overlay" id="forcePlayOverlay" style="display:none;">
-            <h3 style="color: white;">البث يعمل الآن!</h3>
-            <button class="btn-success" onclick="forcePlayVideo()">▶️ انقر للمشاهدة</button>
-        </div>
+    <div class="video-wrapper" id="videoWrapper">
+        <div class="video-container">
+            <!-- شاشات التفاعل للمشاهد -->
+            <div class="overlay" id="viewerJoinOverlay" style="display:none;">
+                <h3 style="color: white; margin-bottom: 20px;">أهلاً بك في غرفة المشاهدة</h3>
+                <button class="btn-success" onclick="viewerEnterRoom()" style="font-size: 1.2em; padding: 15px 30px;">الدخول للغرفة</button>
+            </div>
+            
+            <div class="overlay" id="waitingHostOverlay" style="display:none;">
+                <h3 style="color: #fca311;">في انتظار المضيف لبدء الفيلم...</h3>
+                <p style="color: #aaa;">سيبدأ البث هنا تلقائياً</p>
+            </div>
+            
+            <div class="overlay" id="forcePlayOverlay" style="display:none;">
+                <h3 style="color: white;">البث يعمل الآن!</h3>
+                <button class="btn-success" onclick="forcePlayVideo()">▶️ انقر للمشاهدة</button>
+            </div>
 
-        <video id="mainVideo" playsinline autoplay></video>
+            <!-- أضفنا controls ليتمكن من استخدام المشغل بشكل طبيعي -->
+            <video id="mainVideo" playsinline autoplay controls></video>
+        </div>
     </div>
 </div>
 
@@ -135,6 +144,7 @@
             }
         });
 
+        // استلام المايكروفون من الضيف
         peer.on('call', (call) => {
             call.answer();
             call.on('stream', (remoteAudio) => {
@@ -159,28 +169,21 @@
     }
 
     // ==========================================
-    // الدوال الأساسية (أصبحت مرئية للأزرار الآن)
+    // 1. دالة بدء البث للمضيف (مع تحسين جودة الصوت)
     // ==========================================
-
-    // 1. دالة بدء البث للمضيف
     async function startHostStream() {
-        // التحقق السريع من أن الموقع يعمل على HTTPS لتجنب فشل الكود بصمت
         if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
             alert("⚠️ هام: يجب أن تفتح الموقع برابط يبدأ بـ HTTPS لكي يعمل البث.");
             return;
         }
 
         try {
-            document.getElementById('hostStatus').innerText = "جاري التقاط شاشة الفيلم...";
+            document.getElementById('hostStatus').innerText = "جاري التقاط الشاشة...";
             
             const displayStream = await navigator.mediaDevices.getDisplayMedia({
                 video: true,
-                audio: { echoCancellation: false, noiseSuppression: false }
+                audio: { echoCancellation: false, noiseSuppression: false } // منع الفلاتر
             });
-
-            if (displayStream.getAudioTracks().length === 0) {
-                alert("⚠️ تنبيه: لم تقم بتفعيل 'مشاركة الصوت' (Share tab audio). لن يتم بث صوت الفيلم!");
-            }
 
             document.getElementById('hostStatus').innerText = "جاري التقاط المايكروفون...";
 
@@ -198,9 +201,15 @@
             }
             audioContext.createMediaStreamSource(micStream).connect(dest);
 
+            // السر الجديد: إخبار المتصفح أن هذا البث عبارة عن "موسيقى سينمائية" وليس مكالمة بشرية
+            const mixedAudioTrack = dest.stream.getAudioTracks()[0];
+            if ('contentHint' in mixedAudioTrack) {
+                mixedAudioTrack.contentHint = 'music'; 
+            }
+
             localStream = new MediaStream([
                 displayStream.getVideoTracks()[0],
-                dest.stream.getAudioTracks()[0]
+                mixedAudioTrack // استخدام المسار المُحسن
             ]);
 
             mainVideo.srcObject = localStream;
@@ -223,30 +232,52 @@
         }
     }
 
-    // 2. دالة دخول المشاهد
+    // ==========================================
+    // 2. دوال المشاهد والشاشة الكاملة
+    // ==========================================
     function viewerEnterRoom() {
         mainVideo.play().catch(() => {}); 
         
         document.getElementById('viewerJoinOverlay').style.display = 'none';
         document.getElementById('waitingHostOverlay').style.display = 'flex';
         document.getElementById('viewerMicBtn').style.display = 'block';
+        document.getElementById('fullscreenBtn').style.display = 'block'; // إظهار زر التكبير
 
         const hostId = window.location.hash.substring(1);
         peer.connect(hostId);
     }
 
-    // 3. دالة التشغيل الإجباري (تحل مشكلة الشاشة السوداء)
     function forcePlayVideo() {
         mainVideo.play();
         document.getElementById('forcePlayOverlay').style.display = 'none';
     }
 
-    // 4. دالة التحكم بالمايكروفون
+    function toggleFullScreen() {
+        const videoWrapper = document.getElementById('videoWrapper');
+        if (!document.fullscreenElement) {
+            if (videoWrapper.requestFullscreen) {
+                videoWrapper.requestFullscreen();
+            } else if (videoWrapper.webkitRequestFullscreen) { /* Safari */
+                videoWrapper.webkitRequestFullscreen();
+            }
+        } else {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            } else if (document.webkitExitFullscreen) { /* Safari */
+                document.webkitExitFullscreen();
+            }
+        }
+    }
+
+    // ==========================================
+    // 3. أداة التحكم بالمايكروفون (التحرير الكامل للهاردوير)
+    // ==========================================
     async function toggleMic(role) {
         const btn = role === 'host' ? document.getElementById('hostMicBtn') : document.getElementById('viewerMicBtn');
         
         try {
             if (!localMicTrack) {
+                // التشغيل: نطلب صلاحية المايك من نظام التشغيل
                 const micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 localMicTrack = micStream.getAudioTracks()[0];
                 
@@ -258,9 +289,12 @@
                 btn.innerText = "🎤 إيقاف مايكروفوني";
                 btn.className = "btn-secondary";
             } else {
-                localMicTrack.enabled = !localMicTrack.enabled;
-                btn.innerText = localMicTrack.enabled ? "🎤 إيقاف مايكروفوني" : "🔇 تشغيل مايكروفوني";
-                btn.className = localMicTrack.enabled ? "btn-secondary" : "btn-active";
+                // الإيقاف الجذري: لا نقوم بكتمه فقط، بل نقتله لنخبر الأندرويد أن يخرج من وضع المكالمة
+                localMicTrack.stop(); 
+                localMicTrack = null; // تفريغه بالكامل
+                
+                btn.innerText = "🔇 تشغيل مايكروفوني";
+                btn.className = "btn-active";
             }
         } catch (err) {
             alert("لا يمكن الوصول للمايكروفون. يرجى السماح للمتصفح باستخدام المايك.");
