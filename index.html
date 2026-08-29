@@ -2,17 +2,15 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <!-- هذا السطر لجعل الموقع متوافقاً مع الهواتف -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>غرفة مشاهدة الأفلام</title>
-    <!-- استدعاء مكتبة PeerJS -->
+    <title>غرفة مشاهدة الأفلام VIP</title>
     <script src="https://unpkg.com/peerjs@1.5.1/dist/peerjs.min.js"></script>
     <style>
         :root {
-            --bg-color: #121212;
-            --panel-bg: #1e1e1e;
+            --bg-color: #0f0f0f;
+            --panel-bg: #1f1f1f;
             --text-color: #ffffff;
-            --primary: #e50914; /* لون نتفليكس */
+            --primary: #e50914;
             --primary-hover: #b20710;
         }
         body {
@@ -20,233 +18,222 @@
             padding: 10px;
             background-color: var(--bg-color);
             color: var(--text-color);
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Segoe UI', Tahoma, sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
         }
         .container {
             width: 100%;
-            max-width: 900px;
+            max-width: 1000px;
             display: flex;
             flex-direction: column;
             gap: 15px;
         }
-        .header {
+        .header, .panel {
             background-color: var(--panel-bg);
             padding: 15px;
             border-radius: 8px;
             text-align: center;
         }
-        .connection-panel {
+        .flex-row {
             display: flex;
             flex-wrap: wrap;
             gap: 10px;
-            background-color: var(--panel-bg);
-            padding: 15px;
-            border-radius: 8px;
             justify-content: center;
-            align-items: center;
         }
         input {
-            padding: 10px;
-            border-radius: 5px;
-            border: 1px solid #333;
+            padding: 12px;
+            border-radius: 6px;
+            border: 1px solid #444;
             background: #2b2b2b;
             color: white;
             flex-grow: 1;
             min-width: 200px;
         }
         button {
-            padding: 10px 15px;
+            padding: 12px 20px;
             border: none;
-            border-radius: 5px;
+            border-radius: 6px;
             background-color: var(--primary);
             color: white;
             cursor: pointer;
             font-weight: bold;
-            transition: 0.3s;
-            flex-grow: 1;
+            transition: 0.2s;
         }
-        button:hover {
-            background-color: var(--primary-hover);
-        }
-        .controls {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
+        button:hover { background-color: var(--primary-hover); }
+        .btn-success { background-color: #28a745; }
+        .btn-success:hover { background-color: #218838; }
+        .btn-warning { background-color: #ffc107; color: black; }
         .video-container {
             position: relative;
             width: 100%;
-            background: black;
+            background: #000;
             border-radius: 8px;
+            aspect-ratio: 16/9;
             overflow: hidden;
-            aspect-ratio: 16/9; /* يحافظ على أبعاد الشاشة */
+            border: 2px solid #333;
         }
         video {
             width: 100%;
             height: 100%;
             object-fit: contain;
         }
-        #myIdDisplay {
-            color: #4CAF50;
-            font-weight: bold;
-            user-select: all;
-            background: #000;
-            padding: 5px 10px;
-            border-radius: 4px;
+        #playOverlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
         }
-        /* تعديلات للهواتف */
-        @media (max-width: 600px) {
-            .connection-panel, .controls {
-                flex-direction: column;
-            }
-            button, input {
-                width: 100%;
-            }
+        #playOverlay button {
+            font-size: 20px;
+            padding: 15px 30px;
+            background-color: #28a745;
         }
+        #myIdDisplay { color: #4CAF50; font-size: 1.2em; user-select: all; background: #000; padding: 5px 10px; border-radius: 4px; }
+        .instructions { font-size: 0.9em; color: #aaa; margin-top: 10px; text-align: right; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <div class="header">
-        <h2>🍿 غرفة مشاهدة الأفلام</h2>
-        <p>الـ ID الخاص بك: <span id="myIdDisplay">جاري الاتصال بالسيرفر...</span></p>
+        <h2>🎬 غرفة مشاهدة خاصة</h2>
+        <p>الـ ID الخاص بك: <br> <strong id="myIdDisplay">جاري الاتصال...</strong></p>
     </div>
 
-    <!-- لوحة الاتصال -->
-    <div class="connection-panel">
-        <input type="text" id="friendIdInput" placeholder="أدخل ID صديقك هنا للاتصال به">
-        <button onclick="connectToFriend()">مشاهدة البث (لصديقك)</button>
+    <div class="panel">
+        <h3>أدوات المضيف (صاحب الفيلم)</h3>
+        <div class="flex-row">
+            <button class="btn-success" onclick="startHostStream()">1. بدء بث الفيلم</button>
+            <button id="hostMicBtn" onclick="toggleHostMic()">إيقاف المايك 🎤</button>
+        </div>
+        <div class="instructions">
+            ⚠️ <b>مهم للمضيف:</b> عند بدء البث، اختر (Chrome Tab) وليس الشاشة كاملة، وتأكد من تفعيل "Share tab audio".
+        </div>
     </div>
 
-    <!-- أدوات التحكم (لك كمضيف) -->
-    <div class="controls">
-        <button onclick="startStreaming()" style="background-color: #4CAF50;">بدء بث الفيلم (للمضيف)</button>
-        <button id="micBtn" onclick="toggleMic()">إيقاف المايك 🎤</button>
+    <div class="panel">
+        <h3>أدوات المشاهد (صديقك)</h3>
+        <div class="flex-row">
+            <input type="text" id="friendIdInput" placeholder="أدخل ID المضيف هنا">
+            <button onclick="joinStream()">2. الاتصال بالمضيف</button>
+        </div>
     </div>
 
-    <!-- شاشة العرض -->
     <div class="video-container">
-        <video id="mainVideo" autoplay playsinline controls></video>
+        <div id="playOverlay">
+            <h3 style="color: white; margin-bottom: 20px;">البث جاهز!</h3>
+            <button onclick="playVideo()">▶️ انقر هنا للتشغيل</button>
+        </div>
+        <video id="mainVideo" playsinline controls></video>
     </div>
 </div>
 
 <script>
-    // تهيئة PeerJS باستخدام سيرفرهم المجاني
     const peer = new Peer();
-    let myStream;
-    let myAudioTrack;
+    let hostStream;
+    let hostAudioTrack;
     
     const mainVideo = document.getElementById('mainVideo');
     const myIdDisplay = document.getElementById('myIdDisplay');
-    const friendIdInput = document.getElementById('friendIdInput');
-    const micBtn = document.getElementById('micBtn');
+    const playOverlay = document.getElementById('playOverlay');
+    const hostMicBtn = document.getElementById('hostMicBtn');
 
-    // عندما يتم تخصيص ID لك بنجاح
     peer.on('open', (id) => {
         myIdDisplay.innerText = id;
     });
 
-    // 1. دالة بدء البث (أنت كمضيف تضغط عليها)
-    async function startStreaming() {
+    // ==========================================
+    // 1. أكواد المضيف (Host)
+    // ==========================================
+    async function startHostStream() {
         try {
-            // التقاط شاشة نتفليكس بالصوت الخام (بدون فلاتر)
+            // التقاط الشاشة (بدون فلاتر صوت)
             const displayStream = await navigator.mediaDevices.getDisplayMedia({
-                video: true,
+                video: { width: 1280, height: 720 },
                 audio: {
                     echoCancellation: false,
-                    noiseSuppression: false, // الصوت خام
+                    noiseSuppression: false,
                     autoGainControl: false,
                     sampleRate: 48000
                 }
             });
 
-            // التقاط المايكروفون الخاص بك
+            // التقاط مايكروفون المضيف
             const micStream = await navigator.mediaDevices.getUserMedia({
-                audio: {
-                    echoCancellation: true,
-                    noiseSuppression: true
-                }
+                audio: { echoCancellation: true, noiseSuppression: true }
             });
 
-            myAudioTrack = micStream.getAudioTracks()[0];
+            hostAudioTrack = micStream.getAudioTracks()[0];
 
-            // دمج صوت الفيلم مع صوت المايكروفون في مسار واحد
-            const audioContext = new AudioContext();
+            // دمج الصوتين باحترافية (Sample Rate عالي)
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 48000 });
             const dest = audioContext.createMediaStreamDestination();
             
-            if(displayStream.getAudioTracks().length > 0){
+            if(displayStream.getAudioTracks().length > 0) {
                 audioContext.createMediaStreamSource(displayStream).connect(dest);
             }
             audioContext.createMediaStreamSource(micStream).connect(dest);
 
-            // إنشاء البث النهائي (فيديو الشاشة + الصوت المدمج)
-            myStream = new MediaStream([
+            hostStream = new MediaStream([
                 displayStream.getVideoTracks()[0],
                 dest.stream.getAudioTracks()[0]
             ]);
 
-            // عرض البث لك للتأكد
-            mainVideo.srcObject = myStream;
-            mainVideo.muted = true; // نكتم الصوت عندك عشان ما تسمع صدى نفسك
+            mainVideo.srcObject = hostStream;
+            mainVideo.muted = true; // كتم الصوت عند المضيف لمنع الصدى
+            mainVideo.play();
 
-            alert("البث جاهز! أعطِ الـ ID الخاص بك لصديقك.");
+            alert("البث يعمل الآن! أرسل الـ ID لصديقك.");
 
-            // الاستماع لأي اتصال قادم من صديقك
+            // الاستماع لاتصال صديقك
             peer.on('call', (call) => {
-                // الرد على الاتصال وإرسال البث له
-                call.answer(myStream);
+                call.answer(hostStream);
             });
 
         } catch (error) {
-            console.error("حدث خطأ: ", error);
-            alert("فشل بدء البث، تأكد من إعطاء الصلاحيات.");
+            console.error(error);
+            alert("حدث خطأ. تأكد من استخدام متصفح كروم ومنح الصلاحيات.");
         }
     }
 
-    // 2. دالة المشاهدة (صديقك يضغط عليها)
-    function connectToFriend() {
-        const friendId = friendIdInput.value.trim();
-        if (!friendId) {
-            alert("يرجى إدخال الـ ID أولاً");
-            return;
+    function toggleHostMic() {
+        if (hostAudioTrack) {
+            hostAudioTrack.enabled = !hostAudioTrack.enabled;
+            hostMicBtn.innerText = hostAudioTrack.enabled ? "إيقاف المايك 🎤" : "تشغيل المايك 🔇";
+            hostMicBtn.className = hostAudioTrack.enabled ? "" : "btn-warning";
         }
+    }
 
-        // إنشاء اتصال فارغ فقط لاستقبال البث
-        navigator.mediaDevices.getUserMedia({ video: false, audio: true }).then((micStream) => {
-            const call = peer.call(friendId, micStream);
-            
-            call.on('stream', (remoteStream) => {
-                mainVideo.srcObject = remoteStream;
-                mainVideo.play();
-            });
-        }).catch((err) => {
-             // حتى لو لم يكن لدى صديقك مايك، يستطيع المشاهدة
-             const fakeStream = new MediaStream(); 
-             const call = peer.call(friendId, fakeStream);
-             call.on('stream', (remoteStream) => {
-                mainVideo.srcObject = remoteStream;
-                mainVideo.play();
-            });
+    // ==========================================
+    // 2. أكواد المشاهد (Viewer)
+    // ==========================================
+    function joinStream() {
+        const hostId = document.getElementById('friendIdInput').value.trim();
+        if (!hostId) { alert("أدخل الـ ID أولاً"); return; }
+
+        // المشاهد يتصل بدون مايكروفون في البداية لضمان عدم دخول الهاتف في "وضع المكالمة"
+        const call = peer.call(hostId, new MediaStream()); // إرسال ستريم فارغ
+        
+        call.on('stream', (remoteStream) => {
+            mainVideo.srcObject = remoteStream;
+            // إظهار زر التشغيل الإجباري لحل مشكلة الشاشة السوداء (Autoplay Policy)
+            playOverlay.style.display = 'flex';
         });
     }
 
-    // 3. أداة التحكم بالمايكروفون
-    function toggleMic() {
-        if (myAudioTrack) {
-            myAudioTrack.enabled = !myAudioTrack.enabled;
-            if (myAudioTrack.enabled) {
-                micBtn.innerText = "إيقاف المايك 🎤";
-                micBtn.style.backgroundColor = "";
-            } else {
-                micBtn.innerText = "تشغيل المايك 🔇";
-                micBtn.style.backgroundColor = "#ff9800";
-            }
-        }
+    // دالة النقر لتشغيل الفيديو (تحل مشكلة الشاشة السوداء في الموبايل)
+    function playVideo() {
+        mainVideo.play().then(() => {
+            playOverlay.style.display = 'none';
+        }).catch(err => {
+            alert("حدث خطأ في التشغيل: " + err);
+        });
     }
 </script>
 </body>
