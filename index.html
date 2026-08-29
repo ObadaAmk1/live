@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>سينما الأصدقاء - بث نقي</title>
+    <title>سينما الأصدقاء - بث سينمائي نقي</title>
     <script src="https://unpkg.com/peerjs@1.5.1/dist/peerjs.min.js"></script>
     <style>
         :root { --bg-color: #080808; --panel-bg: #141414; --text: #ffffff; --primary: #e50914; --success: #28a745; --border: #333; }
@@ -100,7 +100,7 @@
     });
 
     // ==========================================
-    // 1. المضيف (بث الشاشة والصوت الخالص)
+    // 1. المضيف (الهندسة الصوتية الصارمة)
     // ==========================================
     if (isHost) {
         peer.on('connection', (conn) => {
@@ -119,18 +119,31 @@
         try {
             document.getElementById('hostStatus').innerText = "جاري التقاط الشاشة...";
             
-            // سحب مباشر لنتفليكس بدون أي تعديلات أو فلاتر
+            // طلب التقاط الشاشة مع قيود صوتية عنيفة لإطفاء كل فلاتر الـ WebRTC
             localStream = await navigator.mediaDevices.getDisplayMedia({
                 video: true,
-                audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } 
+                audio: { 
+                    echoCancellation: false, 
+                    noiseSuppression: false, 
+                    autoGainControl: false, // هذا الذي كان يخفض الصوت فجأة
+                    channelCount: 2,        // إجبار المتصفح على صوت ستيريو
+                    sampleRate: 48000       // جودة صوت الأقراص المدمجة والسينما
+                } 
             });
 
             if (localStream.getAudioTracks().length === 0) {
                 alert("⚠️ تنبيه: لم تقم بتفعيل 'مشاركة الصوت' (Share tab audio)!");
+            } else {
+                // *** الحل السحري الحاسم ***
+                // إخبار المتصفح بأن هذا الصوت هو موسيقى عالية الجودة وليس مكالمة
+                const audioTrack = localStream.getAudioTracks()[0];
+                if ('contentHint' in audioTrack) {
+                    audioTrack.contentHint = 'music';
+                }
             }
 
             mainVideo.srcObject = localStream;
-            mainVideo.muted = true; // كتم الصوت عندك فقط
+            mainVideo.muted = true; // كتم الصوت عندك فقط لمنع الصدى
             mainVideo.play();
 
             document.getElementById('hostStatus').innerText = "البث المباشر يعمل الآن 🔴";
@@ -146,7 +159,7 @@
     }
 
     // ==========================================
-    // 2. المشاهد (استقبال البث كفيلم طبيعي)
+    // 2. المشاهد (استقبال البث)
     // ==========================================
     function viewerEnterRoom() {
         mainVideo.play().catch(() => {}); 
@@ -160,7 +173,7 @@
 
     if (!isHost) {
         peer.on('call', (call) => {
-            call.answer(); // استلام البث بدون إرسال مايكروفون
+            call.answer(); // استلام البث
             call.on('stream', (stream) => {
                 document.getElementById('waitingHostOverlay').style.display = 'none';
                 mainVideo.srcObject = stream;
