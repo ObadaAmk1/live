@@ -151,62 +151,65 @@
         });
 
         async function startHostStream() {
-            try {
-                document.getElementById('hostStatus').innerText = "جاري التقاط الشاشة...";
-                
-                // التقاط مايك المضيف
-                const micStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true }});
-                localMicTrack = micStream.getAudioTracks()[0];
+        try {
+            document.getElementById('hostStatus').innerText = "جاري التقاط شاشة الفيلم...";
+            
+            // 1. التقاط شاشة نتفليكس أولاً (مهم جداً لتجاوز حماية المتصفح)
+            // جعلنا الفيديو true فقط بدون أبعاد إجبارية
+            const displayStream = await navigator.mediaDevices.getDisplayMedia({
+                video: true,
+                audio: { echoCancellation: false, noiseSuppression: false }
+            });
 
-                // التقاط شاشة نتفليكس (تذكر: Chrome Tab حصراً + Share Audio)
-                const displayStream = await navigator.mediaDevices.getDisplayMedia({
-                    video: { width: 1280, height: 720 },
-                    audio: { echoCancellation: false, noiseSuppression: false }
-                });
-
-                if (displayStream.getAudioTracks().length === 0) {
-                    alert("⚠️ تنبيه: لم تقم بتفعيل 'Share tab audio'. لن يتم بث صوت الفيلم!");
-                }
-
-                // دمج الصوت (مايك + فيلم)
-                const audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 48000 });
-                const dest = audioContext.createMediaStreamDestination();
-                
-                if (displayStream.getAudioTracks().length > 0) {
-                    audioContext.createMediaStreamSource(displayStream).connect(dest);
-                }
-                audioContext.createMediaStreamSource(micStream).connect(dest);
-
-                localStream = new MediaStream([
-                    displayStream.getVideoTracks()[0],
-                    dest.stream.getAudioTracks()[0]
-                ]);
-
-                // عرض البث للمضيف نفسه
-                mainVideo.srcObject = localStream;
-                mainVideo.muted = true; // كتم الصوت محلياً لمنع الصدى
-                mainVideo.play();
-
-                document.getElementById('hostStatus').innerText = "البث المباشر يعمل الآن 🔴";
-                document.getElementById('hostStatus').style.color = "#e50914";
-                document.getElementById('startStreamBtn').style.display = 'none';
-                document.getElementById('hostMicBtn').style.display = 'block';
-
-                // إرسال البث فوراً لكل مَن هو في الغرفة حالياً (دخول مبكر)
-                connectedViewers.forEach(viewerId => {
-                    peer.call(viewerId, localStream);
-                });
-
-            } catch (error) {
-                console.error(error);
-                alert("فشل بدء البث.");
+            if (displayStream.getAudioTracks().length === 0) {
+                alert("⚠️ تنبيه: لم تقم بتفعيل 'مشاركة الصوت' (Share tab audio). لن يتم بث صوت الفيلم!");
             }
+
+            document.getElementById('hostStatus').innerText = "جاري التقاط المايكروفون...";
+
+            // 2. التقاط المايكروفون ثانياً
+            const micStream = await navigator.mediaDevices.getUserMedia({ 
+                audio: { echoCancellation: true, noiseSuppression: true },
+                video: false
+            });
+            localMicTrack = micStream.getAudioTracks()[0];
+
+            // دمج الصوت (مايك + فيلم)
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 48000 });
+            const dest = audioContext.createMediaStreamDestination();
+            
+            if (displayStream.getAudioTracks().length > 0) {
+                audioContext.createMediaStreamSource(displayStream).connect(dest);
+            }
+            audioContext.createMediaStreamSource(micStream).connect(dest);
+
+            localStream = new MediaStream([
+                displayStream.getVideoTracks()[0],
+                dest.stream.getAudioTracks()[0]
+            ]);
+
+            // عرض البث للمضيف نفسه
+            mainVideo.srcObject = localStream;
+            mainVideo.muted = true; // كتم الصوت محلياً لمنع الصدى
+            mainVideo.play();
+
+            document.getElementById('hostStatus').innerText = "البث المباشر يعمل الآن 🔴";
+            document.getElementById('hostStatus').style.color = "#e50914";
+            document.getElementById('startStreamBtn').style.display = 'none';
+            document.getElementById('hostMicBtn').style.display = 'block';
+
+            // إرسال البث فوراً لكل مَن هو متصل في الغرفة حالياً
+            connectedViewers.forEach(viewerId => {
+                peer.call(viewerId, localStream);
+            });
+
+        } catch (error) {
+            console.error(error);
+            // إضافة رسالة توضح سبب الخطأ بدقة لتسهيل حله إذا تكرر
+            alert("فشل بدء البث. السبب: " + error.message);
+            document.getElementById('hostStatus').innerText = "حدث خطأ. يرجى إعادة تحميل الصفحة.";
         }
     }
-
-    // ==========================================
-    // 2. منطق المشاهد (Viewer Logic)
-    // ==========================================
     if (!isHost) {
         const hostId = window.location.hash.substring(1);
 
